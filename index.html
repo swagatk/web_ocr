@@ -31,13 +31,16 @@
 </head>
 <body class="bg-gray-900 text-white flex items-center justify-center min-h-screen p-4">
 
+    <!-- Navigation Buttons (Top Right Corner) -->
+    <button id="viewHistoryBtn" class="hidden fixed top-6 right-6 z-10 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg transition-transform transform hover:scale-105 duration-300 text-sm">View History</button>
+    <button id="backBtnTop" class="hidden fixed top-6 right-6 z-10 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-transform transform hover:scale-105 duration-300 text-sm">Back to Main</button>
+
     <!-- Main App Page -->
     <div id="main-app-page" class="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-2xl mx-auto transform transition-all hover:scale-105 duration-500">
         <!-- Header -->
         <div class="text-center mb-8">
             <h1 class="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">Image to Text Extractor</h1>
             <p class="text-gray-400 mt-2">Select an image file or paste an image from your clipboard (Ctrl+V).</p>
-            <button id="viewHistoryBtn" class="hidden mt-4 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg transition-transform transform hover:scale-105 duration-300 text-sm inline-block">View History</button>
         </div>
 
         <!-- File Upload Section -->
@@ -82,11 +85,8 @@
     <!-- History Page -->
     <div id="history-page" class="hidden bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-4xl mx-auto">
          <!-- Header -->
-        <div class="text-center mb-8 flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div class="text-center mb-8">
             <h1 class="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">Extraction History</h1>
-            <div>
-                <button id="backBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-transform transform hover:scale-105 duration-300 text-sm inline-block">Back to Main</button>
-            </div>
         </div>
         
         <!-- History Controls -->
@@ -131,7 +131,7 @@
         const copyBtn = document.getElementById('copyBtn');
         const copyMessage = document.getElementById('copyMessage');
         const viewHistoryBtn = document.getElementById('viewHistoryBtn');
-        const backBtn = document.getElementById('backBtn');
+        const backBtnTop = document.getElementById('backBtnTop');
         
         // History Page elements
         const historyContainer = document.getElementById('history-container');
@@ -147,16 +147,20 @@
         function showMainPage() {
             mainAppPage.classList.remove('hidden');
             historyPage.classList.add('hidden');
+            checkHistoryButton(); // This will show the View History button if needed
+            backBtnTop.classList.add('hidden');
         }
 
         function showHistoryPage() {
             renderHistory();
             mainAppPage.classList.add('hidden');
             historyPage.classList.remove('hidden');
+            viewHistoryBtn.classList.add('hidden');
+            backBtnTop.classList.remove('hidden');
         }
 
         viewHistoryBtn.addEventListener('click', showHistoryPage);
-        backBtn.addEventListener('click', showMainPage);
+        backBtnTop.addEventListener('click', showMainPage);
 
         // --- History Management ---
         
