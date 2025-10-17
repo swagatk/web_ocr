@@ -31,11 +31,13 @@
 </head>
 <body class="bg-gray-900 text-white flex items-center justify-center min-h-screen p-4">
 
-    <div class="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-2xl mx-auto transform transition-all hover:scale-105 duration-500">
+    <!-- Main App Page -->
+    <div id="main-app-page" class="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-2xl mx-auto transform transition-all hover:scale-105 duration-500">
         <!-- Header -->
         <div class="text-center mb-8">
             <h1 class="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">Image to Text Extractor</h1>
             <p class="text-gray-400 mt-2">Select an image file or paste an image from your clipboard (Ctrl+V).</p>
+            <button id="viewHistoryBtn" class="hidden mt-4 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg transition-transform transform hover:scale-105 duration-300 text-sm inline-block">View History</button>
         </div>
 
         <!-- File Upload Section -->
@@ -71,45 +73,202 @@
             <div class="relative">
                  <pre id="outputText" class="bg-gray-900 text-gray-300 p-6 rounded-lg font-mono text-sm border border-gray-700 whitespace-pre-wrap min-h-[100px]"></pre>
                  <button id="copyBtn" title="Copy to clipboard" class="absolute top-2 right-2 p-2 bg-gray-700 hover:bg-gray-600 rounded-md transition">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2-0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
                  </button>
             </div>
         </div>
-         <!-- Message for copy action -->
-        <div id="copyMessage" class="fixed bottom-5 right-5 bg-green-500 text-white py-2 px-4 rounded-lg shadow-lg opacity-0 transition-opacity duration-300">
-            Text copied to clipboard!
+    </div>
+
+    <!-- History Page -->
+    <div id="history-page" class="hidden bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-4xl mx-auto">
+         <!-- Header -->
+        <div class="text-center mb-8 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <h1 class="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">Extraction History</h1>
+            <div>
+                <button id="backBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-transform transform hover:scale-105 duration-300 text-sm inline-block">Back to Main</button>
+            </div>
         </div>
+        
+        <!-- History Controls -->
+        <div id="history-controls" class="hidden flex items-center justify-between mb-4 bg-gray-900 p-3 rounded-lg">
+            <div class="flex items-center">
+                <input type="checkbox" id="selectAllCheckbox" class="h-5 w-5 rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-600">
+                <label for="selectAllCheckbox" class="ml-2 text-sm font-medium">Select All</label>
+            </div>
+            <button id="deleteSelectedBtn" class="bg-red-600 hover:bg-red-700 disabled:bg-gray-500 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-lg transition-transform transform hover:scale-105 duration-300 text-sm">Delete Selected</button>
+        </div>
+
+        <!-- History Container -->
+        <div id="history-container" class="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+            <!-- History items will be injected here -->
+        </div>
+        
+        <!-- No History Message -->
+        <div id="no-history-message" class="hidden text-center text-gray-400 mt-12">
+            <p class="text-xl">Your history is empty.</p>
+            <p class="mt-2">Go back to the main page to extract text from an image.</p>
+        </div>
+    </div>
+
+
+    <!-- Message for copy action -->
+    <div id="copyMessage" class="fixed bottom-5 right-5 bg-green-500 text-white py-2 px-4 rounded-lg shadow-lg opacity-0 transition-opacity duration-300">
+        Text copied to clipboard!
     </div>
 
     <script>
         // DOM element references
+        const mainAppPage = document.getElementById('main-app-page');
+        const historyPage = document.getElementById('history-page');
+
         const imageInput = document.getElementById('imageInput');
         const imagePreview = document.getElementById('imagePreview');
         const extractBtn = document.getElementById('extractBtn');
         const outputText = document.getElementById('outputText');
-        const statusEl = document.getElementById('status');
-        const progressBar = document.getElementById('progressBar');
         const imageContainer = document.getElementById('image-container');
         const outputContainer = document.getElementById('output-container');
         const progressContainer = document.getElementById('progress-container');
         const copyBtn = document.getElementById('copyBtn');
         const copyMessage = document.getElementById('copyMessage');
+        const viewHistoryBtn = document.getElementById('viewHistoryBtn');
+        const backBtn = document.getElementById('backBtn');
         
+        // History Page elements
+        const historyContainer = document.getElementById('history-container');
+        const noHistoryMessage = document.getElementById('no-history-message');
+        const historyControls = document.getElementById('history-controls');
+        const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+        const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
+
+        const HISTORY_KEY = 'ocrAppHistory';
         let worker = null;
 
-        // Function to initialize the Tesseract worker
+        // --- Page Navigation ---
+        function showMainPage() {
+            mainAppPage.classList.remove('hidden');
+            historyPage.classList.add('hidden');
+        }
+
+        function showHistoryPage() {
+            renderHistory();
+            mainAppPage.classList.add('hidden');
+            historyPage.classList.remove('hidden');
+        }
+
+        viewHistoryBtn.addEventListener('click', showHistoryPage);
+        backBtn.addEventListener('click', showMainPage);
+
+        // --- History Management ---
+        
+        function updateDeleteButtonState() {
+            const selectedCheckboxes = document.querySelectorAll('.history-item-checkbox:checked');
+            deleteSelectedBtn.disabled = selectedCheckboxes.length === 0;
+        }
+        
+        function renderHistory() {
+            const history = JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
+            historyContainer.innerHTML = '';
+            selectAllCheckbox.checked = false;
+
+            if (history.length > 0) {
+                noHistoryMessage.classList.add('hidden');
+                historyControls.classList.remove('hidden');
+
+                history.forEach((item, index) => {
+                    const historyItem = document.createElement('div');
+                    historyItem.className = 'history-item bg-gray-900 p-4 rounded-lg flex items-center space-x-4 border border-gray-700';
+                    
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.className = 'history-item-checkbox h-5 w-5 rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-600 flex-shrink-0';
+                    checkbox.dataset.index = index;
+                    checkbox.addEventListener('change', updateDeleteButtonState);
+
+                    const img = document.createElement('img');
+                    img.src = item.imageSrc;
+                    img.className = 'w-24 h-24 object-contain rounded-md bg-black';
+
+                    const textContentDiv = document.createElement('div');
+                    textContentDiv.className = 'flex-1 min-w-0';
+                    
+                    const dateP = document.createElement('p');
+                    dateP.textContent = item.date;
+                    dateP.className = 'text-gray-500 text-xs mb-2 truncate';
+
+                    const textPre = document.createElement('pre');
+                    textPre.textContent = item.text || 'No text extracted.';
+                    textPre.className = 'text-gray-300 font-mono text-sm whitespace-pre-wrap';
+
+                    textContentDiv.appendChild(dateP);
+                    textContentDiv.appendChild(textPre);
+
+                    historyItem.appendChild(checkbox);
+                    historyItem.appendChild(img);
+                    historyItem.appendChild(textContentDiv);
+                    historyContainer.appendChild(historyItem);
+                });
+            } else {
+                noHistoryMessage.classList.remove('hidden');
+                historyControls.classList.add('hidden');
+                historyContainer.innerHTML = '';
+            }
+            updateDeleteButtonState();
+        }
+        
+        selectAllCheckbox.addEventListener('change', () => {
+            const checkboxes = document.querySelectorAll('.history-item-checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = selectAllCheckbox.checked;
+            });
+            updateDeleteButtonState();
+        });
+        
+        deleteSelectedBtn.addEventListener('click', () => {
+            const selectedCheckboxes = document.querySelectorAll('.history-item-checkbox:checked');
+            if (selectedCheckboxes.length === 0) return;
+
+            if (confirm(`Are you sure you want to delete ${selectedCheckboxes.length} selected item(s)?`)) {
+                let history = JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
+                const indicesToDelete = Array.from(selectedCheckboxes).map(cb => parseInt(cb.dataset.index));
+                
+                const updatedHistory = history.filter((_, index) => !indicesToDelete.includes(index));
+
+                localStorage.setItem(HISTORY_KEY, JSON.stringify(updatedHistory));
+                renderHistory();
+                checkHistoryButton();
+            }
+        });
+
+        function checkHistoryButton() {
+            const history = JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
+            if (history.length > 0) {
+                viewHistoryBtn.classList.remove('hidden');
+            } else {
+                viewHistoryBtn.classList.add('hidden');
+            }
+        }
+
+        function saveHistory(imageSrc, text) {
+            const history = JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
+            const newEntry = { imageSrc, text, date: new Date().toLocaleString() };
+
+            history.unshift(newEntry);
+            
+            if(history.length > 20) {
+                history.pop();
+            }
+
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+            checkHistoryButton();
+        }
+
+        // --- OCR Logic ---
         async function initializeTesseract() {
-            // Check if worker already exists
             if (worker) return;
-            // Create a new Tesseract worker.
             worker = await Tesseract.createWorker();
-            // Load the English language model
             await worker.loadLanguage('eng');
             await worker.initialize('eng');
         }
-
-        // Initialize Tesseract when the script loads for faster processing later
-        initializeTesseract();
 
         function displayImage(imageUrl) {
             imagePreview.src = imageUrl;
@@ -119,7 +278,6 @@
             progressContainer.classList.add('hidden');
         }
 
-        // Event listener for file input change
         imageInput.addEventListener('change', (event) => {
             if (event.target.files && event.target.files[0]) {
                 const reader = new FileReader();
@@ -130,7 +288,6 @@
             }
         });
 
-        // Event listener for paste action on the whole document
         document.addEventListener('paste', (event) => {
             const items = (event.clipboardData || event.originalEvent.clipboardData).items;
             for (const item of items) {
@@ -141,47 +298,39 @@
                          displayImage(e.target.result);
                     };
                     reader.readAsDataURL(blob);
-                    event.preventDefault(); // Prevent the default paste action
-                    return; // Exit after handling the first image
+                    event.preventDefault();
+                    return;
                 }
             }
         });
 
-
-        // Event listener for the extract text button click
         extractBtn.addEventListener('click', async () => {
-            // Disable button and show progress
             extractBtn.disabled = true;
             extractBtn.textContent = 'Extracting...';
             outputContainer.classList.add('hidden');
             
-            // Ensure Tesseract is ready
             if (!worker) {
                 await initializeTesseract();
             }
 
-            // Perform OCR on the image
             const { data: { text } } = await worker.recognize(imagePreview.src);
 
-            // Display the result
             outputText.textContent = text;
             outputContainer.classList.remove('hidden');
+            
+            saveHistory(imagePreview.src, text);
 
-            // Reset UI state
             extractBtn.disabled = false;
             extractBtn.textContent = 'Extract Text';
         });
         
-        // Event listener for copy button
         copyBtn.addEventListener('click', () => {
             const textArea = document.createElement('textarea');
             textArea.value = outputText.textContent;
             document.body.appendChild(textArea);
             textArea.select();
             try {
-                // Use execCommand as a fallback for broader browser support
                 document.execCommand('copy');
-                // Show a confirmation message
                 copyMessage.classList.remove('opacity-0');
                 setTimeout(() => {
                     copyMessage.classList.add('opacity-0');
@@ -191,6 +340,10 @@
             }
             document.body.removeChild(textArea);
         });
+
+        // --- Initial Load ---
+        initializeTesseract();
+        checkHistoryButton();
 
     </script>
 

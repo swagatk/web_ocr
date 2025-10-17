@@ -7,4 +7,8 @@
 
 ## Images
 
+### Main page
 ![input_image](./images/input-output.png)
+
+### History page
+![history](./images/history.png)
